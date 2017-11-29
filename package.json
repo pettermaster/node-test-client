@@ -1,0 +1,24 @@
+{
+  "name": "noderamltest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "core-js": "^2.5.1",
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^3.2.3",
+    "node-fetch": "^1.7.3",
+    "tslint": "^5.8.0",
+    "typescript": "^2.6.2"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^1.6.7",
+    "tslint-config-standard": "^7.0.0"
+  },
+  "scripts": {
+    "start": "gulp && node dist/index",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
