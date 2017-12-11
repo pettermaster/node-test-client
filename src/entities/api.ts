@@ -1,11 +1,11 @@
 
 export interface Api {
-    rootPath: String
+    rootPath: string
     endpoints: Endpoint[]
 }
 
 export interface Endpoint {
-    relativePath: String
+    relativePath: string
     httpMethods: HttpMethod[]
 }
 

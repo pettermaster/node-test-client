@@ -1,0 +1,28 @@
+{
+  "rootPath": "http://localhost:8080/api",
+  "endpoints": [
+    {
+      "relativePath": "chats",
+      "httpMethods": [
+        {
+          "methodName": "GET",
+          "entity": "[ChatDTO]"
+        },
+        {
+          "methodName": "POST",
+          "entity": "ChatDTO",
+          "sample": {
+            "_id": "test",
+            "__v": "test",
+            "messages": [
+              "test"
+            ],
+            "users": [
+              "test"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
