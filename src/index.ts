@@ -45,7 +45,7 @@ const compareResults = (requestData, responseData): PropertyTest[] => {
     const propertyTests: PropertyTest[] = []
 
     for (let key in responseData) {
-        if (typeof requestData[key] !== 'undefined') {
+        if (typeof responseData[key] !== 'undefined') {
             propertyTests.push({
                 name: key,
                 isWriteAble: requestData[key] === responseData[key]
@@ -72,15 +72,19 @@ const post = async (url: string, sample: any, methodName: MethodName): Promise<H
     if (response.ok) {
         const json = await response.json()
 
-        const httpMethodTest: HttpMethodTest = {
+        return {
             methodName: methodName,
             responseCode: response.status,
-            responseObject: compareResults(sample,json),
+            responseObject: json,
+            propertyTests: compareResults(sample, json)
+        }
+    } else {
+        return {
+            methodName: methodName,
+            responseCode: response.status,
+            responseObject: undefined,
             propertyTests: []
         }
-        return httpMethodTest
-    } else {
-        console.log(response.status)
     }
 }
 
@@ -92,19 +96,15 @@ const createHttpMethodTest = async (httpMethod: HttpMethod, relativePath): Promi
         return get(fullPath, httpMethod.methodName)
 
     case MethodName.POST:
-        return post(fullPath, sample)
-    }
-    // fall through case
-    return {
-        methodName: httpMethod.methodName,
-        responseCode: 0,
-        responseObject: null,
-        propertyTests: []
+        return post(fullPath, sample, httpMethod.methodName)
+
+    default:
+        throw Error(`Method ${httpMethod.methodName} not supported`)
     }
 }
 
 const createEndpointTest = async (endpoint: Endpoint): Promise<EndpointTest> => {
-    const httpMethodTests = await endpoint.httpMethods.map(createHttpMethodTest)
+    const httpMethodTests = await Promise.all(endpoint.httpMethods.map(createHttpMethodTest))
     const endpointTest: EndpointTest = {
         name: endpoint.relativePath,
         httpMethodTests : httpMethodTests
@@ -112,13 +112,35 @@ const createEndpointTest = async (endpoint: Endpoint): Promise<EndpointTest> => 
     return endpointTest
 }
 
-const testApi = async (api: Api): ApiTest => {
-    const endpointTests = api.endpoints.map(createEndpointTest)
+const testApi = async (api: Api): Promise<ApiTest> => {
+    const endpointTests = await Promise.all(api.endpoints.map(createEndpointTest))
     const apiTest: ApiTest = {
         endpointTests: endpointTests
     }
     return apiTest
 }
 
-const apiTest: ApiTest = testApi(api)
-console.log(apiTest)
+const isSuccessHttpCode = (httpCode: number): boolean => {
+    return httpCode >= 200 && httpCode < 300
+}
+
+const executeTest = async () => {
+    const apiTest: ApiTest = await testApi(api)
+    apiTest.endpointTests.forEach(endpointTest => {
+        console.log(endpointTest.name)
+        endpointTest.httpMethodTests.forEach(httpMethodTest => {
+            console.log(`\t${httpMethodTest.methodName}`)
+            if (httpMethodTest.methodName === MethodName.GET) {
+                console.log(`\t\t${isSuccessHttpCode(httpMethodTest.responseCode) ? `accessible` : `not accessible`}`)
+
+            } else {
+                httpMethodTest.propertyTests.forEach(propertyTest => {
+                    console.log(`\t\tKey ${propertyTest.name} is ${propertyTest.isWriteAble ? `writeable` : `NOT writeable`}`)
+                })
+            }
+
+        })
+    })
+}
+
+executeTest()
