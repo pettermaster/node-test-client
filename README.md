@@ -12,7 +12,7 @@ $ npm install
 ### Configuring JWT
 1. [Register a user](#registering-a-user)
 2. [Get a token](#getting-a-token)
-3. [Configure the client] (#configure-the-client)
+3. [Configure the client](#configure-the-client)
 
 #### Registering a user
 POST to ```http://localhost:8080/users``` with username and password in the body.
