@@ -3,13 +3,7 @@ import fetch from 'node-fetch'
 import { Api, Endpoint, HttpMethod, MethodName } from './entities/api'
 import { ApiTest, EndpointTest, HttpMethodTest, PropertyTest } from './entities/test'
 const api = require('./api.json') as Api
-const USER_ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7Il9pZCI6IjVhMWQ1MGZlZTIyMGJhMmY3YWI1OTUzNCIsInVzZXJuYW1lIjoicGV0dGVyIiwicGFzc3dvcmQiOiJwZXR0ZXIiLCJfX3YiOjAsImNoYXRzIjpbXSwicm9sZSI6IlVTRVIifSwicm9sZSI6IlVTRVIiLCJpYXQiOjE1MTE4NzA3MzAsImV4cCI6MTUxMjczNDczMH0.-_nFv57h-IagPVwCtsDmG0N-PkgMkiaAj2k4sYhVpLo'
-
-const arrayRegex = /\[.*]/
-
-const isArrayEndpoint = (entity) => {
-    return entity.match(arrayRegex) !== null
-}
+const USER_ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7Il9pZCI6IjVhMWQ1MGZlZTIyMGJhMmY3YWI1OTUzNCIsInVzZXJuYW1lIjoicGV0dGVyIiwicGFzc3dvcmQiOiJwZXR0ZXIiLCJfX3YiOjAsImNoYXRzIjpbXSwicm9sZSI6IlVTRVIifSwicm9sZSI6IlVTRVIiLCJpYXQiOjE1MTc4MjMyMTcsImV4cCI6MTUxODY4NzIxN30.tXC-eSxF71kPlmujAektMomvu6JGvg3juVdRoZ1zoD0'
 
 const get = async (url: string, methodName: MethodName): Promise<HttpMethodTest> => {
     const response = await fetch(
@@ -17,12 +11,12 @@ const get = async (url: string, methodName: MethodName): Promise<HttpMethodTest>
         {
             method: 'get',
             headers: {
-                'Authorization': ''
+                'Authorization': USER_ACCESS_TOKEN
             }
         }
     )
+    const json = await response.json()
     if (response.ok) {
-        const json = await response.json()
         return {
             methodName: methodName,
             responseCode: response.status,
@@ -34,7 +28,8 @@ const get = async (url: string, methodName: MethodName): Promise<HttpMethodTest>
             methodName: methodName,
             responseCode: response.status,
             responseObject: null,
-            propertyTests: []
+            propertyTests: [],
+            detailedError: json.message
         }
     }
 
@@ -45,14 +40,10 @@ const compareResults = (requestData, responseData): PropertyTest[] => {
     const propertyTests: PropertyTest[] = []
 
     for (let key in responseData) {
-        if (typeof responseData[key] !== 'undefined') {
-            propertyTests.push({
-                name: key,
-                isWriteAble: requestData[key] === responseData[key]
-            })
-        } else {
-            console.log(`property ${key} not tested`)
-        }
+        propertyTests.push({
+            name: key,
+            isWriteAble: requestData[key] === responseData[key]
+        })
     }
 
     return propertyTests
@@ -69,8 +60,8 @@ const post = async (url: string, sample: any, methodName: MethodName): Promise<H
             }
         }
     )
+    const json = await response.json()
     if (response.ok) {
-        const json = await response.json()
 
         return {
             methodName: methodName,
@@ -83,12 +74,13 @@ const post = async (url: string, sample: any, methodName: MethodName): Promise<H
             methodName: methodName,
             responseCode: response.status,
             responseObject: undefined,
-            propertyTests: []
+            propertyTests: [],
+            detailedError: json.message
         }
     }
 }
 
-const createHttpMethodTest = async (httpMethod: HttpMethod, relativePath): Promise<HttpMethodTest> => {
+const createHttpMethodTest = async (httpMethod: HttpMethod, relativePath: string): Promise<HttpMethodTest> => {
     const fullPath = `${api.rootPath}/${relativePath}`
     const sample = httpMethod.sample
     switch (httpMethod.methodName) {
@@ -104,43 +96,44 @@ const createHttpMethodTest = async (httpMethod: HttpMethod, relativePath): Promi
 }
 
 const createEndpointTest = async (endpoint: Endpoint): Promise<EndpointTest> => {
-    const httpMethodTests = await Promise.all(endpoint.httpMethods.map(createHttpMethodTest))
-    const endpointTest: EndpointTest = {
+    const httpMethodTests = await Promise.all(endpoint.httpMethods.map(httpMethod => createHttpMethodTest(httpMethod, endpoint.relativePath)))
+    return {
         name: endpoint.relativePath,
-        httpMethodTests : httpMethodTests
+        httpMethodTests: httpMethodTests
     }
-    return endpointTest
 }
 
 const testApi = async (api: Api): Promise<ApiTest> => {
     const endpointTests = await Promise.all(api.endpoints.map(createEndpointTest))
-    const apiTest: ApiTest = {
+    return {
         endpointTests: endpointTests
     }
-    return apiTest
 }
 
 const isSuccessHttpCode = (httpCode: number): boolean => {
     return httpCode >= 200 && httpCode < 300
 }
 
+const logHttpMethodTest = (httpMethodTest: HttpMethodTest) => {
+    console.log(`  ${httpMethodTest.methodName}`)
+    const isGetMethod = httpMethodTest.methodName === MethodName.GET
+    if (isGetMethod) {
+        console.log(`    ${isSuccessHttpCode(httpMethodTest.responseCode) ? `accessible` : `not accessible (${httpMethodTest.detailedError})`}`)
+    } else {
+        httpMethodTest.propertyTests.forEach(propertyTest => {
+            console.log(`    Key ${propertyTest.name} is ${propertyTest.isWriteAble ? `writeable` : `NOT writeable`}`)
+        })
+    }
+}
+
+const logEndpointTest = (endpointTest: EndpointTest) => {
+    console.log(endpointTest.name)
+    endpointTest.httpMethodTests.forEach(logHttpMethodTest)
+}
+
 const executeTest = async () => {
     const apiTest: ApiTest = await testApi(api)
-    apiTest.endpointTests.forEach(endpointTest => {
-        console.log(endpointTest.name)
-        endpointTest.httpMethodTests.forEach(httpMethodTest => {
-            console.log(`\t${httpMethodTest.methodName}`)
-            if (httpMethodTest.methodName === MethodName.GET) {
-                console.log(`\t\t${isSuccessHttpCode(httpMethodTest.responseCode) ? `accessible` : `not accessible`}`)
-
-            } else {
-                httpMethodTest.propertyTests.forEach(propertyTest => {
-                    console.log(`\t\tKey ${propertyTest.name} is ${propertyTest.isWriteAble ? `writeable` : `NOT writeable`}`)
-                })
-            }
-
-        })
-    })
+    apiTest.endpointTests.forEach(logEndpointTest)
 }
 
 executeTest()

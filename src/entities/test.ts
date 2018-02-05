@@ -14,6 +14,7 @@ export interface HttpMethodTest {
     responseCode: number
     responseObject: any
     propertyTests: PropertyTest[]
+    detailedError?: string
 }
 
 export interface PropertyTest {
