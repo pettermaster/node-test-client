@@ -10,8 +10,9 @@ $ npm install
 2. [Run the test](#running-the-test)
 3. [Read the results](#reading-the-results)
 ### Configuring JWT
-1. Register a user
-2. Sign in and obtain
+1. [Register a user](#registering-a-user)
+2. [Get a token](#getting-a-token)
+3. [Configure the client] (#configure-the-client)
 
 #### Registering a user
 POST to ```http://localhost:8080/users``` with username and password in the body.
@@ -19,7 +20,7 @@ POST to ```http://localhost:8080/users``` with username and password in the body
 #### Getting a token
 POST to ```http://localhost:8080/login``` with username and password in the body (same values as when registering). 
 
-#### Replace JWT
+#### Configure the client
 Copy the *access_token* in the login response, and replace USER_ACCESS_TOKEN in index.ts with the new value.
 
 ### Running the test
